@@ -26,14 +26,12 @@ def build_sql_chain():
 def build_synthesis_chain():
     prompt = ChatPromptTemplate.from_messages([
         ("system", settings.synthesis_system_prompt),
-        ("human", "{question}")
+        ("human", "Provide the natural language answer.")
     ])
     
-    # We can use the same model and temperature, or tweak it. 
-    # A slightly higher temperature (e.g., 0.3) makes conversational text flow better.
     llm = ChatOpenAI(
         model=settings.llm_model, 
-        temperature=0.3, 
+        temperature=0.0,  # Use 0.0 for strict factual alignment
         api_key=settings.openai_api_key
     )
     return prompt | llm | StrOutputParser()
@@ -120,22 +118,26 @@ async def ask_database(payload: QuestionRequest):
         
     # Step C: Synthesize the final natural language response
     try:
-        # We must convert the Python dictionary/list to a string for the LLM
-        import json
-        results_string = json.dumps(db_results, default=str)
-        print(f"Results to synthesize: {results_string}")
-        natural_language_answer = synthesis_chain.invoke({
-            "results": results_string,
-            "question": payload.question
-        })
-        
-        # Return both the conversational answer and the debug info
-        return {
-            "answer": natural_language_answer,
-            "debug": {
-                "generated_sql": final_sql,
-                "raw_data": db_results
+            import json
+            
+            if not db_results:
+                natural_language_answer = "I couldn't find any data matching your request."
+            else:
+                results_string = json.dumps(db_results, default=str)
+                
+                # Pass both the SQL and the raw results
+                natural_language_answer = synthesis_chain.invoke({
+                    "question": payload.question,
+                    "sql_query": final_sql,
+                    "results": results_string
+                })
+            
+            return {
+                "answer": natural_language_answer,
+                "debug": {
+                    "generated_sql": final_sql,
+                    "raw_data": db_results
+                }
             }
-        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Synthesis Error: {str(e)}")
