@@ -1,60 +1,58 @@
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Settings(BaseSettings):
-    # If a variable has no default value (like api_key), Pydantic will 
-    # throw an error if it is missing from the .env file.
+    # --- Required Secrets (Must exist in .env) ---
     openai_api_key: str
 
-    # Prompt template location
-    prompt_file_path: Path = Path("prompts/sql_system.txt")
-    synthesis_prompt_path: Path = Path("prompts/synthesis_system.txt")
-    
-    # Database (with sensible defaults)
-    db_host: str = "localhost"
-    db_port: int = 5432
-    db_user: str = "postgres"
-    db_password: str
-    db_name: str = "company_db"
-    
-    # AI Config
+    # If left empty/None, it indexes all tables. 
+    # If populated, it ONLY indexes what you specify.
+    target_tables: list[str] | None = None  
+    # e.g., in .env: TARGET_TABLES='["film", "customer", "rental", "payment", "category"]'
+    # --- Database Settings ---
+    # Universal SQLAlchemy connection string:
+    # PostgreSQL: postgresql+psycopg://user:password@localhost:5432/dbname
+    # MySQL:      mysql+pymysql://user:password@localhost:3306/dbname
+    # DuckDB:     duckdb:///local.duckdb
+    database_url: str = (
+        "postgresql+psycopg://postgres:mysecretpassword@localhost:5432/company_db"
+    )
+
+    # --- Vector DB Settings ---
+    # Used by PGVector to store and retrieve schema embeddings
+    pgvector_collection_name: str = "schema_tables"
+    retriever_top_k: int = 2
+
+    # --- LLM Settings ---
     llm_model: str = "gpt-4o-mini"
     llm_temperature: float = 0.0
-    retriever_top_k: int = 2
     agent_max_retries: int = 3
-    embedding_model: str = "text-embedding-3-small"
 
-    # Helper properties to dynamically generate connection formats
-    @property
-    def psycopg2_params(self) -> dict:
-        return {
-            "host": self.db_host,
-            "port": self.db_port,
-            "user": self.db_user,
-            "password": self.db_password,
-            "dbname": self.db_name
-        }
-        
-    @property
-    def pgvector_connection_string(self) -> str:
-        return f"postgresql+psycopg://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
+    # --- Prompt Template Paths ---
+    sql_prompt_path: Path = Path("prompts/sql_system.txt")
+    synthesis_prompt_path: Path = Path("prompts/synthesis_system.txt")
 
+    # --- Derived Properties (Prompt File Readers) ---
     @property
     def sql_system_prompt(self) -> str:
-        if not self.prompt_file_path.exists():
-            raise FileNotFoundError(f"Prompt file not found at: {self.prompt_file_path}")
-        return self.prompt_file_path.read_text(encoding="utf-8")
+        if not self.sql_prompt_path.exists():
+            raise FileNotFoundError(f"Missing prompt file: {self.sql_prompt_path}")
+        return self.sql_prompt_path.read_text(encoding="utf-8")
 
     @property
     def synthesis_system_prompt(self) -> str:
         if not self.synthesis_prompt_path.exists():
-            raise FileNotFoundError(f"Missing: {self.synthesis_prompt_path}")
+            raise FileNotFoundError(f"Missing prompt file: {self.synthesis_prompt_path}")
         return self.synthesis_prompt_path.read_text(encoding="utf-8")
 
+    # --- Pydantic Settings Configuration ---
     model_config = SettingsConfigDict(
         env_file=".env",
-        extra="ignore"
+        env_file_encoding="utf-8",
+        extra="ignore"  # Ignores extraneous variables in .env without raising an error
     )
 
-# Instantiate it once to be imported by other files
+
+# Instantiate a singleton to be imported across the application
 settings = Settings()

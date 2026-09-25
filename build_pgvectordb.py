@@ -1,52 +1,46 @@
-import os
-from dotenv import load_dotenv
+from config import settings
+from database.factory import get_database_adapter
+
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 from langchain_postgres.vectorstores import PGVector
 
-load_dotenv()
 
-# 1. Simulate our database schema
-TABLE_SCHEMAS = [
-    """
-    -- Table: employees
-    -- Description: Stores basic employee information and hiring dates.
-    CREATE TABLE employees (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(100) NOT NULL,
-                    department VARCHAR(50) NOT NULL,
-                    salary INTEGER NOT NULL,
-                    hire_date DATE NOT NULL
-    );
-    """
-]
-
-def create_pgvector_db():
-    print("Initializing embedding model...")
-    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+def sync_database_schema_to_vector_store():
+    adapter = get_database_adapter(settings.database_url)
     
+    print(f"Connecting to {adapter.get_dialect_name()} and extracting schemas...")
+    extracted_tables = adapter.extract_table_schemas()
+
+    if not extracted_tables:
+        print("No user tables found.")
+        return
+
     documents = []
-    for schema in TABLE_SCHEMAS:
-        doc = Document(page_content=schema.strip(), metadata={"source": "schema_extraction"})
+    for item in extracted_tables:
+        print(f"Extracted DDL for: {item['table_name']}")
+        doc = Document(
+            page_content=item["schema_text"],
+            metadata={"table_name": item["table_name"], "source": "langchain_sqldatabase"}
+        )
         documents.append(doc)
-        
-    print("Connecting to PostgreSQL to store vectors...")
-    
-    # 2. Connection string for LangChain Postgres (Notice it uses postgresql+psycopg)
-    connection = "postgresql+psycopg://postgres:mysecretpassword@localhost:5432/company_db"
-    
-    # 3. Initialize the PGVector store
-    # This automatically creates a table called 'langchain_pg_embedding' in your DB!
+
+    print("\nIndexing into PGVector...")
+    embeddings = OpenAIEmbeddings(
+        model="text-embedding-3-small",
+        api_key=settings.openai_api_key
+    )
+
     vector_store = PGVector(
         embeddings=embeddings,
-        collection_name="schema_tables",
-        connection=connection,
+        collection_name=settings.pgvector_collection_name,
+        connection=settings.database_url,
         use_jsonb=True,
     )
-    
-    # 4. Insert the documents into the database
+
     vector_store.add_documents(documents)
-    print("Vector database built successfully inside PostgreSQL!")
+    print(f"Successfully embedded {len(documents)} table schema(s) into PGVector.")
+
 
 if __name__ == "__main__":
-    create_pgvector_db()
+    sync_database_schema_to_vector_store()

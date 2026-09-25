@@ -5,6 +5,8 @@ Database schema:
 {schema}
 
 RULES:
+- Use ONLY the tables and column names explicitly defined in the database schema above.
+- NEVER invent, assume, or guess partition tables (e.g., do NOT use payment_p2005_07 or similar partitioned tables). All payments reside in the 'payment' table.
 - Return ONLY the raw SQL query.
 - Do not wrap the SQL in markdown formatting (no ```sql).
 - Do not include any explanations.
