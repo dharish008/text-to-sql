@@ -4,6 +4,30 @@ Provides business context, metrics, join hints, and column glossaries
 for LLM Text-to-SQL generation.
 """
 
+COLUMN_ENUMS = {
+    "film": {
+        "rating": ["G", "PG", "PG-13", "R", "NC-17"],
+        "special_features": ["Trailers", "Commentaries", "Deleted Scenes", "Behind the Scenes"]
+    },
+    "category": {
+        "name": [
+            "Action", "Animation", "Children", "Classics", "Comedy", "Documentary",
+            "Drama", "Family", "Foreign", "Games", "Horror", "Music", "New",
+            "Sci-Fi", "Sports", "Travel"
+        ]
+    },
+    "customer": {
+        "active": [1, 0],
+        "activebool": [True, False]
+    },
+    "staff": {
+        "active": [True, False]
+    },
+    "language": {
+        "name": ["English", "Italian", "Japanese", "Mandarin", "French", "German"]
+    }
+}
+
 SEMANTIC_CATALOG = {
     # ---------------------------------------------------------
     # Core Transaction & Fact Entities
@@ -344,4 +368,41 @@ SEMANTIC_CATALOG = {
             "sid": "Assigned store ID."
         }
     }
+}
+
+JOIN_PATHS = {
+    "film": [
+        "To Category: film f JOIN film_category fc ON f.film_id = fc.film_id JOIN category c ON fc.category_id = c.category_id",
+        "To Actor: film f JOIN film_actor fa ON f.film_id = fa.film_id JOIN actor a ON fa.actor_id = a.actor_id",
+        "To Inventory: film f JOIN inventory i ON f.film_id = i.film_id",
+        "To Rental: film f JOIN inventory i ON f.film_id = i.film_id JOIN rental r ON i.inventory_id = r.inventory_id",
+        "To Revenue/Payment: film f JOIN inventory i ON f.film_id = i.film_id JOIN rental r ON i.inventory_id = r.inventory_id JOIN payment p ON r.rental_id = p.rental_id"
+    ],
+    "rental": [
+        "To Customer: rental r JOIN customer c ON r.customer_id = c.customer_id",
+        "To Film: rental r JOIN inventory i ON r.inventory_id = i.inventory_id JOIN film f ON i.film_id = f.film_id",
+        "To Category: rental r JOIN inventory i ON r.inventory_id = i.inventory_id JOIN film_category fc ON i.film_id = fc.film_id JOIN category c ON fc.category_id = c.category_id",
+        "To Payment: rental r JOIN payment p ON r.rental_id = p.rental_id",
+        "To Store: rental r JOIN inventory i ON r.inventory_id = i.inventory_id JOIN store s ON i.store_id = s.store_id"
+    ],
+    "payment": [
+        "To Customer: payment p JOIN customer c ON p.customer_id = c.customer_id",
+        "To Rental: payment p JOIN rental r ON p.rental_id = r.rental_id",
+        "To Film: payment p JOIN rental r ON p.rental_id = r.rental_id JOIN inventory i ON r.inventory_id = i.inventory_id JOIN film f ON i.film_id = f.film_id",
+        "To Staff: payment p JOIN staff s ON p.staff_id = s.staff_id"
+    ],
+    "customer": [
+        "To Address/Location: customer c JOIN address a ON c.address_id = a.address_id JOIN city ci ON a.city_id = ci.city_id JOIN country co ON ci.country_id = co.country_id",
+        "To Rentals: customer c JOIN rental r ON c.customer_id = r.customer_id",
+        "To Payments: customer c JOIN payment p ON c.customer_id = p.customer_id"
+    ],
+    "actor": [
+        "To Film: actor a JOIN film_actor fa ON a.actor_id = fa.actor_id JOIN film f ON fa.film_id = f.film_id",
+        "To Category: actor a JOIN film_actor fa ON a.actor_id = fa.actor_id JOIN film_category fc ON fa.film_id = fc.film_id JOIN category c ON fc.category_id = c.category_id"
+    ],
+    "store": [
+        "To Manager: store s JOIN staff m ON s.manager_staff_id = m.staff_id",
+        "To Location: store s JOIN address a ON s.address_id = a.address_id JOIN city ci ON a.city_id = ci.city_id JOIN country co ON ci.country_id = co.country_id",
+        "To Inventory: store s JOIN inventory i ON s.store_id = i.store_id"
+    ]
 }

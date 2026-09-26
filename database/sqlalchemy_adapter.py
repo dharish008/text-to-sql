@@ -3,26 +3,16 @@ from sqlalchemy import text, create_engine, inspect
 from langchain_community.utilities import SQLDatabase
 from database.base import DatabaseAdapter
 from config import settings
-from configure.semantic_metadata import SEMANTIC_CATALOG
+from configure.semantic_metadata import SEMANTIC_CATALOG, COLUMN_ENUMS, JOIN_PATHS
+
 
 class LangChainSQLDatabaseAdapter(DatabaseAdapter):
     def __init__(self, connection_url: str):
-        # 1. Create an engine to inspect actual table names first
-        engine = create_engine(connection_url)
-        inspector = inspect(engine)
-        existing_tables = set(inspector.get_table_names())
-
-        # 2. Vector DB tables we want to exclude if they exist
-        target_ignored = {"langchain_pg_embedding", "langchain_pg_collection"}
-        
-        # Only ignore tables that are actually in the database
-        tables_to_ignore = list(target_ignored.intersection(existing_tables))
-
-        # 3. Initialize SQLDatabase safely
+        # sample_rows_in_table_info=3 automatically includes 3 sample rows per table
         self.db = SQLDatabase.from_uri(
             connection_url,
-            include_tables=settings.target_tables, # None means include all
-            sample_rows_in_table_info=0
+            include_tables=getattr(settings, "target_tables", None),
+            sample_rows_in_table_info=3
         )
 
     def execute_query(self, query: str) -> List[Dict[str, Any]]:
@@ -40,29 +30,42 @@ class LangChainSQLDatabaseAdapter(DatabaseAdapter):
         table_schemas = []
 
         for table in usable_tables:
-            raw_ddl = self.db.get_table_info(table_names=[table]).strip()
-            
-            # Enrich DDL with semantic metadata if defined
-            meta = SEMANTIC_CATALOG.get(table)
-            if meta:
-                header = [f"-- TABLE DESCRIPTION: {meta.get('description', '')}"]
-                
-                rules = meta.get("business_rules", [])
-                if rules:
-                    header.append("-- BUSINESS RULES & FORMULAS:")
-                    for rule in rules:
-                        header.append(f"--   * {rule}")
+            raw_ddl_and_samples = self.db.get_table_info(table_names=[table]).strip()
 
-                glossary = meta.get("column_glossary", {})
-                if glossary:
-                    header.append("-- COLUMN GLOSSARY:")
-                    for col, desc in glossary.items():
-                        header.append(f"--   * {col}: {desc}")
+            meta = SEMANTIC_CATALOG.get(table, {})
+            enums = COLUMN_ENUMS.get(table, {})
+            joins = JOIN_PATHS.get(table, [])
 
-                header_text = "\n".join(header)
-                combined_content = f"{header_text}\n\n{raw_ddl}"
-            else:
-                combined_content = raw_ddl
+            header = []
+            if meta.get("description"):
+                header.append(f"-- TABLE DESCRIPTION: {meta['description']}")
+
+            rules = meta.get("business_rules", [])
+            if rules:
+                header.append("-- BUSINESS RULES & FORMULAS:")
+                for rule in rules:
+                    header.append(f"--   * {rule}")
+
+            glossary = meta.get("column_glossary", {})
+            if glossary:
+                header.append("-- COLUMN GLOSSARY:")
+                for col, desc in glossary.items():
+                    header.append(f"--   * {col}: {desc}")
+
+            if enums:
+                header.append("-- LOW-CARDINALITY ALLOWED VALUES (ENUMS):")
+                for col, values in enums.items():
+                    val_str = ", ".join(repr(v) for v in values)
+                    header.append(f"--   * {col} in [{val_str}]")
+
+            # Append explicit multi-table join routes
+            if joins:
+                header.append("-- CANONICAL JOIN PATHS:")
+                for path in joins:
+                    header.append(f"--   * {path}")
+
+            header_text = "\n".join(header)
+            combined_content = f"{header_text}\n\n{raw_ddl_and_samples}" if header_text else raw_ddl_and_samples
 
             table_schemas.append({
                 "table_name": table,
