@@ -3,6 +3,7 @@ from sqlalchemy import text, create_engine, inspect
 from langchain_community.utilities import SQLDatabase
 from database.base import DatabaseAdapter
 from config import settings
+from configure.semantic_metadata import SEMANTIC_CATALOG
 
 class LangChainSQLDatabaseAdapter(DatabaseAdapter):
     def __init__(self, connection_url: str):
@@ -35,14 +36,37 @@ class LangChainSQLDatabaseAdapter(DatabaseAdapter):
         return self.db.dialect
 
     def extract_table_schemas(self) -> List[Dict[str, str]]:
-        table_schemas = []
         usable_tables = self.db.get_usable_table_names()
+        table_schemas = []
 
         for table in usable_tables:
-            table_info = self.db.get_table_info(table_names=[table])
+            raw_ddl = self.db.get_table_info(table_names=[table]).strip()
+            
+            # Enrich DDL with semantic metadata if defined
+            meta = SEMANTIC_CATALOG.get(table)
+            if meta:
+                header = [f"-- TABLE DESCRIPTION: {meta.get('description', '')}"]
+                
+                rules = meta.get("business_rules", [])
+                if rules:
+                    header.append("-- BUSINESS RULES & FORMULAS:")
+                    for rule in rules:
+                        header.append(f"--   * {rule}")
+
+                glossary = meta.get("column_glossary", {})
+                if glossary:
+                    header.append("-- COLUMN GLOSSARY:")
+                    for col, desc in glossary.items():
+                        header.append(f"--   * {col}: {desc}")
+
+                header_text = "\n".join(header)
+                combined_content = f"{header_text}\n\n{raw_ddl}"
+            else:
+                combined_content = raw_ddl
+
             table_schemas.append({
                 "table_name": table,
-                "schema_text": table_info.strip()
+                "schema_text": combined_content
             })
 
         return table_schemas

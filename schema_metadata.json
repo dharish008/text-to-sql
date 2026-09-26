@@ -1,0 +1,187 @@
+{
+    "actor": [
+        "actor_id",
+        "first_name",
+        "last_name",
+        "last_update"
+    ],
+    "actor_info": [
+        "actor_id",
+        "first_name",
+        "last_name",
+        "film_info"
+    ],
+    "address": [
+        "address_id",
+        "address",
+        "address2",
+        "district",
+        "city_id",
+        "postal_code",
+        "phone",
+        "last_update"
+    ],
+    "category": [
+        "category_id",
+        "name",
+        "last_update"
+    ],
+    "city": [
+        "city_id",
+        "city",
+        "country_id",
+        "last_update"
+    ],
+    "country": [
+        "country_id",
+        "country",
+        "last_update"
+    ],
+    "customer": [
+        "customer_id",
+        "store_id",
+        "first_name",
+        "last_name",
+        "email",
+        "address_id",
+        "activebool",
+        "create_date",
+        "last_update",
+        "active"
+    ],
+    "customer_list": [
+        "id",
+        "name",
+        "address",
+        "zip code",
+        "phone",
+        "city",
+        "country",
+        "notes",
+        "sid"
+    ],
+    "film": [
+        "film_id",
+        "title",
+        "description",
+        "release_year",
+        "language_id",
+        "original_language_id",
+        "rental_duration",
+        "rental_rate",
+        "length",
+        "replacement_cost",
+        "rating",
+        "last_update",
+        "special_features",
+        "fulltext"
+    ],
+    "film_actor": [
+        "actor_id",
+        "film_id",
+        "last_update"
+    ],
+    "film_category": [
+        "film_id",
+        "category_id",
+        "last_update"
+    ],
+    "film_list": [
+        "fid",
+        "title",
+        "description",
+        "category",
+        "price",
+        "length",
+        "rating",
+        "actors"
+    ],
+    "inventory": [
+        "inventory_id",
+        "film_id",
+        "store_id",
+        "last_update"
+    ],
+    "langchain_pg_collection": [
+        "uuid",
+        "name",
+        "cmetadata"
+    ],
+    "langchain_pg_embedding": [
+        "id",
+        "collection_id",
+        "embedding",
+        "document",
+        "cmetadata"
+    ],
+    "language": [
+        "language_id",
+        "name",
+        "last_update"
+    ],
+    "nicer_but_slower_film_list": [
+        "fid",
+        "title",
+        "description",
+        "category",
+        "price",
+        "length",
+        "rating",
+        "actors"
+    ],
+    "payment": [
+        "payment_id",
+        "customer_id",
+        "staff_id",
+        "rental_id",
+        "amount",
+        "payment_date"
+    ],
+    "rental": [
+        "rental_id",
+        "rental_date",
+        "inventory_id",
+        "customer_id",
+        "return_date",
+        "staff_id",
+        "last_update"
+    ],
+    "sales_by_film_category": [
+        "category",
+        "total_sales"
+    ],
+    "sales_by_store": [
+        "store",
+        "manager",
+        "total_sales"
+    ],
+    "staff": [
+        "staff_id",
+        "first_name",
+        "last_name",
+        "address_id",
+        "email",
+        "store_id",
+        "active",
+        "username",
+        "password",
+        "last_update",
+        "picture"
+    ],
+    "staff_list": [
+        "id",
+        "name",
+        "address",
+        "zip code",
+        "phone",
+        "city",
+        "country",
+        "sid"
+    ],
+    "store": [
+        "store_id",
+        "manager_staff_id",
+        "address_id",
+        "last_update"
+    ]
+}

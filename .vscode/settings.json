@@ -1,0 +1,9 @@
+{
+    "terminal.integrated.profiles.windows": {
+        "PowerShell (Local Profile)": {
+            "source": "PowerShell",
+            "args": ["-NoExit", "-File", "${workspaceFolder}/.ps1_profile"]
+        }
+    },
+    "terminal.integrated.defaultProfile.windows": "PowerShell (Local Profile)"
+}
