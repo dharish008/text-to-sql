@@ -1,9 +1,12 @@
 {
+    "terminal.integrated.defaultProfile.windows": "PowerShell"
+}
+{
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
     "terminal.integrated.profiles.windows": {
-        "PowerShell (Local Profile)": {
+        "PowerShell": {
             "source": "PowerShell",
-            "args": ["-NoExit", "-File", "${workspaceFolder}/.ps1_profile"]
+            "icon": "terminal-powershell"
         }
-    },
-    "terminal.integrated.defaultProfile.windows": "PowerShell (Local Profile)"
+    }
 }

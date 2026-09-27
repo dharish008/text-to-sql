@@ -1,8 +1,18 @@
 from pathlib import Path
+from typing import Optional
+from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    # Atomic DB parameters with sensible defaults
+    db_driver: str = "postgresql+psycopg"
+    db_user: str = "postgres"
+    db_password: str = "mysecretpassword"
+    db_host: str = "localhost"
+    db_port: int = 5432
+    db_name: str = "company_db"
+
     # --- Required Secrets (Must exist in .env) ---
     openai_api_key: str
 
@@ -28,6 +38,7 @@ class Settings(BaseSettings):
     llm_model: str = "gpt-4o-mini"
     llm_temperature: float = 0.0
     agent_max_retries: int = 3
+    embedding_model: str = "text-embedding-3-small"
 
     # --- Prompt Template Paths ---
     sql_prompt_path: Path = Path("prompts/sql_system.txt")
@@ -45,6 +56,7 @@ class Settings(BaseSettings):
         if not self.synthesis_prompt_path.exists():
             raise FileNotFoundError(f"Missing prompt file: {self.synthesis_prompt_path}")
         return self.synthesis_prompt_path.read_text(encoding="utf-8")
+
 
     # --- Pydantic Settings Configuration ---
     model_config = SettingsConfigDict(
